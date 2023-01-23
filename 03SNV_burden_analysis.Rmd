@@ -1,0 +1,546 @@
+---
+title: "Untitled"
+author: "R.W."
+date: '2023-01-23'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# library
+```{r}
+library(ggplot2)
+library(ggsignif)
+library(ggbeeswarm)
+library(ggpubr)
+library(beeswarm)
+library(vipor)
+library(ggfortify)
+library(VennDiagram)
+library(RColorBrewer)
+library(corrplot)
+library(factoextra)
+library(epitools)
+library(gridExtra)
+```
+
+# read in all polished data
+```{r}
+all = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_all.txt",sep="\t")
+short_phenotype = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_short_phenotypes_wCN.csv",sep="\t")
+short_all = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_short_all.csv",sep="\t")
+
+onlyASD = short_all[which(short_all$phenotype=="ASD"),]
+onlyCancer = short_all[which(short_all$phenotype=="Cancer"),]
+ASDCancer = short_all[which(short_all$phenotype=="ASDCancer"),]
+neither = short_all[which(short_all$phenotype=="neither"),]
+
+for_CN=rbind.data.frame(onlyASD,onlyCancer,ASDCancer,neither)
+for_CN$AGCNST = as.numeric(for_CN$AGCNST)
+
+for_CN_H = for_CN[which(for_CN$haplogroup=="H"),]
+table(for_CN_H$pheno)
+```
+
+# burden without insert
+```{r}
+all_no_insert = all[which(all$Mut.type=="transition"|all$Mut.type=="transversion"),]
+ 
+temp = as.data.frame(table(all_no_insert$SAMPLEID))
+
+temp$Var1 = as.character(temp$Var1)
+
+temp = temp[order(temp$Var1),]
+for_CN = for_CN[order(for_CN$LEGCUSTID),]
+for_CN$burden_noinsert = temp$Freq
+for_CN_H = for_CN[which(for_CN$haplogroup=="H"),]
+```
+
+```{r}
+ggplot(data=for_CN_H,aes(x=burden_noinsert)) +
+  geom_density(fill="lightblue") +
+  ggtitle("SNP/variant burden density plot in H haplogroup") +
+  theme_bw() +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(size=15),
+        legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/04_burden_density_H.pdf", width = 8, height = 6)
+```
+
+
+```{r}
+ggplot(data=for_CN_H,aes(x=burden_noinsert,fill=phenotype)) +
+  geom_density(alpha=0.6) +
+  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="onlyASD"),]$burden_noinsert), size=0.6, color="#00BFC4",alpha=0.6) + #lab
+  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="ASDCancer"),]$burden_noinsert), size=0.6,color = "#C77CFF",alpha=0.6) + #zi
+  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="neither"),]$burden_noinsert), size=0.6, color="#F8766D",alpha=0.6) + #ju
+  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="onlyCancer"),]$burden_noinsert), size=0.6, color="#7CAE00",alpha=0.6) +
+  ggtitle("SNP/variant burden density plot in H haplogroup") +
+  theme_bw() +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/04_burden_density_phenotype_H.pdf", width = 8, height = 6)
+```
+
+
+```{r}
+for_CN_H$pheno = factor(for_CN_H$pheno,levels = c("neither","ASD","Cancer","ASDCancer"))
+
+ggplot(data=for_CN_H,aes(x=pheno,y=burden_noinsert,fill=pheno)) +
+  geom_boxplot(alpha=0.6) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  xlab("") +
+  ylab("variant burden") +
+  theme_bw() +
+  #scale_fill_brewer(palette="Set3") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(size=15),
+        legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/04_variant_burden_H_boxplot.pdf", width = 8, height = 6)
+```
+
+
+## wilcox test
+```{r}
+t1 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="ASD"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="Cancer"),"burden_noinsert"])$p.value
+t2 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="ASD"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="ASDCancer"),"burden_noinsert"])$p.value
+t3 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="ASDCancer"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="Cancer"),"burden_noinsert"])$p.value
+t4 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="ASD"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="neither"),"burden_noinsert"])$p.value
+t5 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="Cancer"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="neither"),"burden_noinsert"])$p.value
+t6 = wilcox.test(for_CN_H[which(for_CN_H$pheno=="ASDCancer"),"burden_noinsert"],for_CN_H[which(for_CN_H$pheno=="neither"),"burden_noinsert"])$p.value
+```
+
+```{r}
+burden_heat = rbind.data.frame(
+c(t1,"onlyASD","onlyCancer"),
+#c(t2,"onlyASD","ASDCancer"),
+c(t3,"ASDCancer","onlyCancer"),
+#c(t4,"onlyASD","neither"),
+#c(t5,"onlyCancer","neither"),
+c(t6,"ASDCancer","neither"),
+#c(t1,"onlyCancer","onlyASD"),
+c(t2,"ASDCancer","onlyASD"),
+#c(t3,"onlyCancer","ASDCancer"),
+c(t4,"neither","onlyASD"),
+c(t5,"neither","onlyCancer"),
+#c(t6,"neither","ASDCancer"),
+c(1,"ASDCancer","ASDCancer"),
+c(1,"onlyASD","onlyASD"),
+c(1,"onlyCancer","onlyCancer"),
+c(1,"neither","neither")
+)
+
+colnames(burden_heat) = c("p value","phenotype1","phenotype2")
+burden_heat$`p value` = as.numeric(burden_heat$`p value`)
+burden_heat$groups <- cut(burden_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+```
+
+```{r}
+ggplot(data=burden_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+    ggtitle("p value of wilcox test results in variant burden whinin H haplogrup") +
+    scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/04_variant_burden_H_p.pdf", width = 8, height = 6)
+```
+
+## logistic regression - controlling age and sex
+```{r}
+temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="ASD"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+
+
+temp = for_CN_H[which(for_CN_H$pheno=="ASDCancer"|for_CN_H$pheno=="ASD"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+
+
+temp = for_CN_H[which(for_CN_H$pheno=="neither"|for_CN_H$pheno=="ASD"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+
+
+temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="ASDCancer"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+
+
+temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="neither"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+
+
+temp = for_CN_H[which(for_CN_H$pheno=="ASDCancer"|for_CN_H$pheno=="neither"),]
+temp$pheno = as.factor(temp$pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+```
+## asd vs. no asd
+```{r}
+for_CN_H$asd_phenotype = "ASD"
+for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="neither"),"asd_phenotype"] = "noASD"
+```
+
+```{r}
+# GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
+# title = "Scatterplot Matrix for PHTS data")
+# 
+# car::vif(lm(burden_noinsert ~ phenotype + SEX + AGCNST,data=temp))
+
+for_CN_H$asd_phenotype = as.character(for_CN_H$asd_phenotype)
+temp = for_CN_H
+temp$asd_phenotype = as.factor(temp$asd_phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$asd_phenotype = as.factor(temp$asd_phenotype)
+summary(glm(asd_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+
+
+wilcox.test(temp[which(temp$asd_phenotype=="ASD"),"burden_noinsert"],temp[which(temp$asd_phenotype=="noASD"),"burden_noinsert"])
+
+```
+
+## asd vs. neither
+```{r}
+temp = for_CN_H[which(for_CN_H$asd_phenotype=="ASD"),]
+temp$asdneither_pheno = "ASD"
+temp1 = for_CN_H[which(for_CN_H$pheno=="neither"),]
+temp1$asdneither_pheno = "neither"
+temp = rbind.data.frame(temp,temp1)
+
+wilcox.test(temp[which(temp$asdneither_pheno=="ASD"),"burden_noinsert"],temp[which(temp$asdneither_pheno=="neither"),"burden_noinsert"])
+
+temp$SEX = as.factor(temp$SEX)
+temp$asdneither_pheno = as.factor(temp$asdneither_pheno)
+temp$AGCNST = as.numeric(temp$AGCNST)
+temp$SEX = as.factor(temp$SEX)
+
+summary(glm(asdneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
+summary(glm(asdneither_pheno ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
+summary(glm(asdneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+```
+
+## cancer vs. no cancer
+```{r}
+for_CN_H$cancer_phenotype = "Cancer"
+for_CN_H[which(for_CN_H$pheno=="ASD"|for_CN_H$pheno=="neither"),"cancer_phenotype"] = "noCancer"
+
+wilcox.test(for_CN_H[which(for_CN_H$cancer_phenotype=="Cancer"),"burden_noinsert"],for_CN_H[which(for_CN_H$cancer_phenotype=="noCancer"),"burden_noinsert"])
+
+# GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
+# title = "Scatterplot Matrix for PHTS data")
+# 
+# car::vif(lm(burden_noinsert ~ phenotype + SEX + AGCNST,data=temp))
+
+temp = for_CN_H
+temp$cancer_phenotype = as.factor(temp$cancer_phenotype)
+temp = for_CN_H
+temp$cancer_phenotype = as.factor(temp$cancer_phenotype)
+temp$SEX = as.numeric(as.factor(temp$SEX))
+
+summary(glm(cancer_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
+summary(glm(cancer_phenotype ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
+summary(glm(cancer_phenotype ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+
+```
+
+## cancer vs. neither
+```{r}
+temp = for_CN_H[which(for_CN_H$cancer_phenotype=="Cancer"),]
+temp$cancerneither_pheno = "Cancer"
+temp1 = for_CN_H[which(for_CN_H$pheno=="neither"),]
+temp1$cancerneither_pheno = "neither"
+temp = rbind.data.frame(temp,temp1)
+
+wilcox.test(temp[which(temp$pheno=="Cancer"),"burden_noinsert"],temp[which(temp$pheno=="neither"),"burden_noinsert"])
+
+temp$cancerneither_pheno = as.factor(temp$cancerneither_pheno)
+temp$SEX = as.factor(temp$SEX)
+temp$AGCNST = as.numeric(temp$AGCNST)
+
+summary(glm(cancerneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
+
+summary(glm(cancerneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+summary(glm(cancerneither_pheno ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
+```
+
+## binary plot 
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="ASD" |for_CN_H$phenotype=="Cancer"),]
+p_onlyasd_onlycancer = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("aquamarine","pink"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="ASD" |for_CN_H$phenotype=="ASDCancer"),]
+p_onlyasd_asdcancer = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("pink","darkslateblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="ASD" |for_CN_H$phenotype=="neither"),]
+temp$phenotype = factor(temp$phenotype,levels = c("ASD","neither"))
+p_onlyasd_neither = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("pink","lightblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="Cancer" |for_CN_H$phenotype=="ASDCancer"),]
+p_onlycancer_asdcancer = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("aquamarine","darkslateblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="Cancer" |for_CN_H$phenotype=="neither"),]
+temp$phenotype = factor(temp$phenotype,levels = c("Cancer","neither"))
+p_onlycancer_neitehr = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("aquamarine","lightblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp = for_CN_H[which(for_CN_H$phenotype=="ASDCancer" |for_CN_H$phenotype=="neither"),]
+temp$phenotype = factor(temp$phenotype,levels = c("ASDCancer","neither"))
+p_neither_asdcancer = 
+  ggplot(data=temp,aes(x=phenotype,y=burden_noinsert)) +
+  geom_boxplot(fill=c("darkslateblue","lightblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+p_asd = ggplot(data=for_CN_H,aes(x=asd_phenotype,y=burden)) +
+  geom_boxplot(fill=c("lightcoral","gold"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  #scale_fill_brewer(palette="YlOrRd",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+p_cancer = ggplot(data=for_CN_H,aes(x=cancer_phenotype,y=burden,fill=cancer_phenotype)) +
+  geom_boxplot(fill=c("darkgreen","greenyellow"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  scale_fill_brewer(palette="PuBu",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+
+```{r}
+temp1 = for_CN_H[which(for_CN_H$pheno=="ASD"|for_CN_H$pheno=="CancerASD"),]
+temp1$pheno = "ASD"
+temp2 = for_CN_H[which(for_CN_H$phenotype=="neither"),]
+temp = rbind.data.frame(temp1,temp2)
+p_asdneither = ggplot(data=temp,aes(x=pheno,y=burden_noinsert,fill=pheno)) +
+  geom_boxplot(fill=c("lightcoral","lightblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  scale_fill_brewer(palette="PuBu",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+temp1 = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="CancerASD"),]
+temp1$pheno = "Cancer"
+temp2 = for_CN_H[which(for_CN_H$phenotype=="neither"),]
+temp = rbind.data.frame(temp1,temp2)
+p_cancerneither = ggplot(data=temp,aes(x=pheno,y=burden_noinsert,fill=pheno)) +
+  geom_boxplot(fill=c("darkgreen","lightblue"),alpha=0.8) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  scale_fill_brewer(palette="PuBu",direction = 1) +
+  ylab("Variant burden") +
+  xlab("") +
+  ylim(0,20) + 
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(""),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+
+```{r}
+p = arrangeGrob(p_onlyasd_onlycancer,p_onlyasd_asdcancer,p_onlyasd_neither,p_onlycancer_neitehr,p_onlycancer_asdcancer,p_neither_asdcancer,p_asd, p_cancer, p_asdneither,p_cancerneither,nrow=5)
+ggsave("~/Documents/08PHTS_WGS_mt/manuscript/new_plot/04_burden_H_boxplot_binary.pdf",p, width = 8, height = 20)
+```
+
+```{r}
+write.table(all_no_insert,"~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_all_no_insert.txt",sep="\t",quote = F)
+
+```
+
+

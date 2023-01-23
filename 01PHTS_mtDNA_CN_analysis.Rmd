@@ -1,0 +1,727 @@
+---
+title: "PHTS_mt_CN_analysis"
+author: "R.W."
+output: html_document
+---
+
+# knit setting
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# library
+```{r}
+library(ggplot2)
+library(ggsignif)
+library(ggbeeswarm)
+library(ggpubr)
+library(beeswarm)
+library(vipor)
+library(ggfortify)
+library(VennDiagram)
+library(RColorBrewer)
+library(corrplot)
+library(factoextra)
+library(scales)
+library(gridExtra)
+```
+
+# read in all polished data
+```{r}
+all = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_all.txt",sep="\t")
+short_phenotype = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_short_phenotypes_wCN.csv",sep="\t")
+short_all = read.csv("~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_short_all.csv",sep="\t")
+```
+
+# phenotype annotation 
+```{r}
+onlyASD = short_all[which(short_all$phenotype=="ASD"),]
+onlyASD$phenotype = "onlyASD"
+onlyCancer = short_all[which(short_all$phenotype=="Cancer"),]
+onlyCancer$phenotype = "onlyCancer"
+ASDCancer = short_all[which(short_all$phenotype=="ASDCancer"),]
+neither = short_all[which(short_all$phenotype=="neither"),]
+ASD = rbind.data.frame(onlyASD,ASDCancer)
+Cancer = rbind.data.frame(onlyCancer,ASDCancer)
+noASD = rbind.data.frame(onlyCancer,neither)
+noCancer = rbind.data.frame(onlyASD,neither)
+
+for_CN=rbind.data.frame(onlyASD,onlyCancer,ASDCancer,neither)
+for_CN$AGCNST = as.numeric(for_CN$AGCNST)
+```
+
+# CN density plot for all samples
+```{r}
+ggplot(data=short_phenotype,aes(x=CN)) +
+  #geom_histogram(alpha=0.6) +
+  geom_density(fill="lightblue") +
+  ggtitle("Copy Number Density Plot") +
+  theme_bw() +
+  scale_fill_brewer(palette="Set3") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        #legend.title = element_text(size=15),
+        legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/03_CN_density.pdf", width = 8, height = 6)
+```  
+
+```{r}
+ggplot(data=onlyASD,aes(x=CN,fill="onlyASD")) +
+  geom_density(alpha=0.6) +
+  geom_vline(xintercept=mean(onlyASD$CN), size=0.6, color="#00BFC4") +
+  geom_density(data=onlyCancer,aes(x=CN,fill="onlyCancer"),alpha=0.6) +
+  geom_vline(xintercept=mean(onlyCancer$CN), size=0.6,color = "#C77CFF") +
+  geom_density(data=ASDCancer,aes(x=CN,fill="ASDCancer"),alpha=0.6) +
+  geom_vline(xintercept=mean(ASDCancer$CN), size=0.6, color="#F8766D") +
+  geom_density(data=neither,aes(x=CN,fill="neither"),alpha=0.6) +
+  geom_vline(xintercept=mean(neither$CN), size=0.6, color="#7CAE00") +
+  xlab("Copy Number") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        legend.title = element_blank(),
+        #legend.position = "none",
+        title = element_text(size=20)) +
+  theme_bw()
+#ggsave("plot/03_CN_phenotype_density.pdf", width = 8, height = 6)  
+```
+
+```{r}
+ggplot(data=for_CN,aes(x=phenotype,y=CN,fill=phenotype)) +
+  geom_boxplot(alpha=0.6) +
+  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+  theme_bw() +
+  theme(axis.text.x=element_text(angle=45,vjust = 0.5, hjust=0.5)) +
+  ylab("Copy Number") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        legend.title = element_blank(),
+        #legend.position = "none",
+        title = element_text(size=20)) +
+  theme_bw()
+#ggsave("plot/03_CN_phenotype_boxplot.pdf", width = 8, height = 6)  
+```
+
+# CN wilcox test for all sample
+## onlyASD, onlyCancer, ASDCancer, neither
+```{r}
+t1 = wilcox.test(onlyASD$CN,onlyCancer$CN)[3]
+t2 = wilcox.test(onlyASD$CN,ASDCancer$CN)[3]
+t3 = wilcox.test(ASDCancer$CN,onlyCancer$CN)[3]
+t4 = wilcox.test(onlyASD$CN,neither$CN)[3]
+t5 = wilcox.test(onlyCancer$CN,neither$CN)[3]
+t6 = wilcox.test(ASDCancer$CN,neither$CN)[3]
+
+CN_heat = rbind.data.frame(
+c(t1,"onlyASD","onlyCancer"),
+#c(t2,"onlyASD","ASDCancer"),
+c(t3,"ASDCancer","onlyCancer"),
+#c(t4,"onlyASD","neither"),
+#c(t5,"onlyCancer","neither"),
+c(t6,"ASDCancer","neither"),
+#c(t1,"onlyCancer","onlyASD"),
+c(t2,"ASDCancer","onlyASD"),
+#c(t3,"onlyCancer","ASDCancer"),
+c(t4,"neither","onlyASD"),
+c(t5,"neither","onlyCancer"),
+#c(t6,"neither","ASDCancer"),
+c(1,"ASDCancer","ASDCancer"),
+c(1,"onlyASD","onlyASD"),
+c(1,"onlyCancer","onlyCancer"),
+c(1,"neither","neither")
+)
+
+colnames(CN_heat) = c("p value","phenotype1","phenotype2")
+CN_heat$`p value` = as.numeric(CN_heat$`p value`)
+CN_heat$groups <- cut(CN_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+    xlab("") +
+    ylab("") +
+    scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+```
+
+## ASD, no ASD, neither
+```{r}
+ASD$asd_phenotype = "ASD"
+noASD$asd_phenotype = "noASD"
+neither$asd_phenotype = "neither"
+for_CN_ASD=rbind.data.frame(ASD,noASD)
+for_CN_ASD$AGCNST = as.numeric(for_CN_ASD$AGCNST)
+for_CN_ASD$asd_phenotype = factor(for_CN_ASD$asd_phenotype,levels = c("ASD","noASD","neither"))
+```
+```{r}
+t1 = wilcox.test(ASD$CN,noASD$CN)[3]
+t2 = wilcox.test(ASD$CN,neither$CN)[3]
+t3 = wilcox.test(neither$CN,noASD$CN)[3]
+
+
+CN_heat_ASD = rbind.data.frame(
+c(t1,"ASD","noASD"),
+c(t2,"ASD","neither"),
+c(t3,"neither","noASD"),
+c(1,"ASD","ASD"),
+c(1,"noASD","noASD"),
+c(1,"neither","neither"))
+
+colnames(CN_heat_ASD) = c("p value","phenotype1","phenotype2")
+CN_heat_ASD$`p value` = as.numeric(CN_heat_ASD$`p value`)
+CN_heat_ASD$groups <- cut(CN_heat_ASD$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat_ASD,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        legend.title = element_text(""),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/03_CN_ASD_p.pdf", width = 8, height = 6)
+```
+
+```{r}
+t1 = wilcox.test(ASD$CN,Cancer$CN)[3]
+t2 = wilcox.test(ASD$CN,noASD$CN)[3]
+t3 = wilcox.test(Cancer$CN,noCancer$CN)[3]
+t4 = wilcox.test(Cancer$CN,neither$CN)[3]
+t5 = wilcox.test(ASD$CN,neither$CN)[3]
+t6 = wilcox.test(noASD$CN,neither$CN)[3]
+t7 = wilcox.test(noCancer$CN,neither$CN)[3]
+
+CN_heat = rbind.data.frame(
+c(t1,"ASD","Cancer"),
+c(t2,"ASD","noASD"),
+c(t3,"Cancer","noCancer"),
+c(t4,"Cancer","neither"),
+c(t5,"ASD","neither"),
+c(t6,"noASD","neither"),
+c(t7,"noCancer","neither")
+)
+
+colnames(CN_heat) = c("p value","phenotype1","phenotype2")
+CN_heat$`p value` = as.numeric(CN_heat$`p value`)
+CN_heat$groups <- cut(CN_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        #legend.text= element_text(size=13),
+        legend.title = element_text(""),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/03_CN_ASD_all_p.pdf", width = 8, height = 6)
+
+```
+
+## cancer, no cancer, neither
+```{r}
+Cancer$asd_phenotype = "NA"
+noCancer$asd_phenotype = "NA"
+Cancer$cancer_phenotype = "Cancer"
+noCancer$cancer_phenotype = "noCancer"
+neither$cancer_phenotype = "neither"
+for_CN_cancer=rbind.data.frame(Cancer,noCancer)
+for_CN_cancer$AGCNST = as.numeric(for_CN_cancer$AGCNST)
+for_CN_cancer$cancer_phenotype = factor(for_CN_cancer$cancer_phenotype,levels = c("Cancer","noCancer","neither"))
+```
+
+```{r}
+t1 = wilcox.test(Cancer$CN,noCancer$CN)[3]
+t2 = wilcox.test(Cancer$CN,neither$CN)[3]
+t3 = wilcox.test(neither$CN,noCancer$CN)[3]
+
+
+CN_heat_cancer = rbind.data.frame(
+c(t1,"Cancer","noCancer"),
+c(t2,"Cancer","neither"),
+c(t3,"neither","noCancer"),
+c(1,"Cancer","Cancer"),
+c(1,"noCancer","noCancer"),
+c(1,"neither","neither"))
+
+colnames(CN_heat_cancer) = c("p value","phenotype1","phenotype2")
+CN_heat_cancer$`p value` = as.numeric(CN_heat_cancer$`p value`)
+CN_heat_cancer$groups <- cut(CN_heat_cancer$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat_cancer,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("darkblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_blank(),
+        #legend.position = "none",
+        title = element_text(size=20))
+```
+## ASD vs. Cancer
+```{r}
+ASD$cancer_phenotype = "NA"
+noASD$cancer_phenotype = "NA"
+onlyCancer$cancerasd_phenotype = "onlyCancer"
+onlyCancer$asd_phenotype = "NA"
+onlyCancer$cancer_phenotype = "NA"
+onlyASD$asd_phenotype = "NA"
+onlyASD$cancer_phenotype = "NA"
+onlyASD$cancerasd_phenotype = "onlyASD"
+ASD$cancerasd_phenotype = "ASD"
+noASD$cancerasd_phenotype = "noASD"
+Cancer$cancerasd_phenotype = "Cancer"
+noCancer$cancerasd_phenotype = "noCancer"
+neither$cancerasd_phenotype = "neither"
+ASDCancer$asd_phenotype = "NA"
+ASDCancer$cancer_phenotype = "NA"
+ASDCancer$cancerasd_phenotype = "ASDCancer"
+for_CN_cancerasd=rbind.data.frame(Cancer,noCancer,ASD,noASD,onlyASD,onlyCancer,neither,ASDCancer)
+for_CN_cancerasd$AGCNST = as.numeric(for_CN_cancerasd$AGCNST)
+for_CN_cancerasd$cancerasd_phenotype = factor(for_CN_cancerasd$cancerasd_phenotype,levels = c("onlyASD","ASD","noASD","onlyCancer","Cancer","noCancer","ASDCancer","neither"))
+```
+
+```{r}
+t1 = wilcox.test(ASD$CN,noASD$CN)[3]
+t2 = wilcox.test(ASD$CN,neither$CN)[3]
+t3 = wilcox.test(ASD$CN,Cancer$CN)[3]
+t4 = wilcox.test(onlyASD$CN,noASD$CN)[3]
+t5 = wilcox.test(onlyASD$CN,neither$CN)[3]
+t6 = wilcox.test(onlyASD$CN,onlyCancer$CN)[3]
+t7 = wilcox.test(onlyCancer$CN,noCancer$CN)[3]
+t8 = wilcox.test(onlyCancer$CN,neither$CN)[3]
+t9 = wilcox.test(Cancer$CN,noCancer$CN)[3]
+t10 = wilcox.test(Cancer$CN,neither$CN)[3]
+
+
+CN_heat_cancerasd = rbind.data.frame(
+c(t1,"ASD","noASD"),
+c(t2,"ASD","neither"),
+c(t3,"ASD","Cancer"),
+c(t4,"onlyASD","noASD"),
+c(t5,"onlyASD","neither"),
+c(t6,"onlyASD","onlyCancer"),
+c(t7,"onlyCancer","noCancer"),
+c(t8,"onlyCancer","neither"),
+c(t9,"Cancer","noCancer"),
+c(t10,"Cancer","neither"))
+
+colnames(CN_heat_cancerasd) = c("p value","phenotype1","phenotype2")
+CN_heat_cancerasd$`p value` = as.numeric(CN_heat_cancerasd$`p value`)
+CN_heat_cancerasd$groups <- cut(CN_heat_cancerasd$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat_cancerasd,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+```
+
+# CN controlling age and sex
+## onlyASD, onlyCancer, ASDCancer, neither
+### colinearity - coorelation & vif
+```{r}
+for_CN$AGCNST = as.numeric(for_CN$AGCNST)
+
+temp = for_CN
+temp$pheno = as.numeric(as.factor(for_CN$phenotype))
+temp$SEX = as.numeric(as.factor(for_CN$SEX))
+GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
+title = "Scatterplot Matrix for PHTS data")
+
+car::vif(lm(CN ~ phenotype + SEX + AGCNST,data=for_CN))
+car::vif(lm(burden ~ phenotype + haplogroup,data=for_CN))
+```
+
+###logistic regression - controlling age and sex
+```{r}
+temp = rbind.data.frame(onlyASD,onlyCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l1 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l2 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l3 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l4 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l5 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+
+temp = rbind.data.frame(ASDCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l6 = summary(glm(phenotype ~ CN + SEX + AGCNST,data=temp, family = "binomial"))
+```
+
+```{r}
+CN_heat = rbind.data.frame(
+c(coef(l1)[2,4],"onlyASD","onlyCancer"),
+#c(t2,"onlyASD","ASDCancer"),
+c(coef(l2)[2,4],"neither","onlyCancer"),
+#c(t4,"onlyASD","neither"),
+#c(t5,"onlyCancer","neither"),
+c(coef(l3)[2,4],"ASDCancer","onlyCancer"),
+#c(t1,"onlyCancer","onlyASD"),
+c(coef(l4)[2,4],"neither","onlyASD"),
+#c(t3,"onlyCancer","ASDCancer"),
+c(coef(l5)[2,4],"ASDCancer","onlyASD"),
+c(coef(l6)[2,4],"ASDCancer","neither"),
+#c(t6,"neither","ASDCancer"),
+c(1,"ASDCancer","ASDCancer"),
+c(1,"onlyASD","onlyASD"),
+c(1,"onlyCancer","onlyCancer"),
+c(1,"neither","neither")
+)
+
+colnames(CN_heat) = c("p value","phenotype1","phenotype2")
+CN_heat$`p value` = as.numeric(CN_heat$`p value`)
+CN_heat$groups <- cut(CN_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  ggtitle("log regression results\n-controlling age at constant and sex") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/03_CN_log_regression_sex_age_p.pdf", width = 8, height = 6)
+```
+
+###logistic regression - controlling and sex
+```{r}
+temp = rbind.data.frame(onlyASD,onlyCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l1 = summary(glm(phenotype ~ CN + SEX,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l2 = summary(glm(phenotype ~ CN + SEX ,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l3 = summary(glm(phenotype ~ CN + SEX ,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l4 = summary(glm(phenotype ~ CN + SEX ,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l5 = summary(glm(phenotype ~ CN + SEX,data=temp, family = "binomial"))
+
+temp = rbind.data.frame(ASDCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l6 = summary(glm(phenotype ~ CN + SEX, data=temp, family = "binomial"))
+```
+
+```{r}
+CN_heat = rbind.data.frame(
+c(coef(l1)[2,4],"onlyASD","onlyCancer"),
+#c(t2,"onlyASD","ASDCancer"),
+c(coef(l2)[2,4],"neither","onlyCancer"),
+#c(t4,"onlyASD","neither"),
+#c(t5,"onlyCancer","neither"),
+c(coef(l3)[2,4],"ASDCancer","onlyCancer"),
+#c(t1,"onlyCancer","onlyASD"),
+c(coef(l4)[2,4],"neither","onlyASD"),
+#c(t3,"onlyCancer","ASDCancer"),
+c(coef(l5)[2,4],"ASDCancer","onlyASD"),
+c(coef(l6)[2,4],"ASDCancer","neither"),
+#c(t6,"neither","ASDCancer"),
+c(1,"ASDCancer","ASDCancer"),
+c(1,"onlyASD","onlyASD"),
+c(1,"onlyCancer","onlyCancer"),
+c(1,"neither","neither")
+)
+
+colnames(CN_heat) = c("p value","phenotype1","phenotype2")
+CN_heat$`p value` = as.numeric(CN_heat$`p value`)
+CN_heat$groups <- cut(CN_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  ggtitle("log regression results\n-controlling age at constant and sex") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+#ggsave("plot/03_CN_log_regression_sex_age_p.pdf", width = 8, height = 6)
+```
+
+
+###logistic regression - controlling age
+```{r}
+temp = rbind.data.frame(onlyASD,onlyCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l1 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l2 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyCancer,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l3 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l4 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+
+
+temp = rbind.data.frame(onlyASD,ASDCancer)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l5 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+
+temp = rbind.data.frame(ASDCancer,neither)
+temp$phenotype = as.factor(temp$phenotype)
+temp$SEX = as.factor(temp$SEX)
+temp$CN = as.numeric(temp$CN)
+temp$AGCNST = as.numeric(temp$AGCNST)
+l6 = summary(glm(phenotype ~ CN + AGCNST,data=temp, family = "binomial"))
+```
+
+```{r}
+CN_heat = rbind.data.frame(
+c(coef(l1)[2,4],"onlyASD","onlyCancer"),
+#c(t2,"onlyASD","ASDCancer"),
+c(coef(l2)[2,4],"neither","onlyCancer"),
+#c(t4,"onlyASD","neither"),
+#c(t5,"onlyCancer","neither"),
+c(coef(l3)[2,4],"ASDCancer","onlyCancer"),
+#c(t1,"onlyCancer","onlyASD"),
+c(coef(l4)[2,4],"neither","onlyASD"),
+#c(t3,"onlyCancer","ASDCancer"),
+c(coef(l5)[2,4],"ASDCancer","onlyASD"),
+c(coef(l6)[2,4],"ASDCancer","neither"),
+#c(t6,"neither","ASDCancer"),
+c(1,"ASDCancer","ASDCancer"),
+c(1,"onlyASD","onlyASD"),
+c(1,"onlyCancer","onlyCancer"),
+c(1,"neither","neither")
+)
+
+colnames(CN_heat) = c("p value","phenotype1","phenotype2")
+CN_heat$`p value` = as.numeric(CN_heat$`p value`)
+CN_heat$groups <- cut(CN_heat$`p value`,              
+                       breaks = c(1,0.1,0.05,0))
+
+ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
+    geom_tile() +
+    theme_bw() +
+  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
+                  guide = guide_legend(reverse = TRUE)) +
+  ggtitle("log regression results\n-controlling age at constant and sex") +
+  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
+        axis.text.y=element_text(size=13),
+        axis.title.x=element_text(size=15),
+        axis.title.y=element_text(size=15),
+        legend.text= element_text(size=13),
+        legend.title = element_text(size=15),
+        #legend.position = "none",
+        title = element_text(size=20))
+```
+
+
+## ASD vs. noASD 
+### logistic regression
+```{r}
+for_CN_ASD$asd_phenotype = as.character(for_CN_ASD$asd_phenotype)
+temp = for_CN_ASD
+temp$pheno = as.numeric(as.factor(temp$asd_phenotype))
+temp$SEX = as.numeric(as.factor(temp$SEX))
+GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
+title = "Scatterplot Matrix for PHTS data")
+
+car::vif(lm(CN ~ phenotype + SEX + AGCNST,data=temp))
+car::vif(lm(burden ~ phenotype + haplogroup,data=temp))
+
+temp$SEX = as.factor(temp$SEX)
+temp$asd_phenotype = as.factor(temp$asd_phenotype)
+summary(glm(asd_phenotype ~ CN + SEX + AGCNST,data=temp,family = "binomial"))
+
+
+summary(glm(asd_phenotype ~ CN + SEX,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ CN + AGCNST,data=temp,family = "binomial"))
+```
+
+## ASD vs. neither
+### logistic
+```{r}
+temp1 = for_CN[which(for_CN$phenotype=="neither"),]
+temp1$asd_phenotype = "neither"
+temp = rbind.data.frame(ASD[,1:20],temp1)
+temp$AGCNST = as.numeric(temp$AGCNST)
+
+
+summary(glm(CN ~ asd_phenotype + SEX + AGCNST,data=temp,family = "binomial"))
+summary(glm(CN ~ asd_phenotype + AGCNST,data=temp,family = "binomial"))
+summary(glm(CN ~ asd_phenotype + SEX,data=temp,family = "binomial"))
+```
+
+
+## Cancer va. noCancer
+### logistic
+no sig
+```{r}
+for_CN_cancer$asd_phenotype = as.character(for_CN_cancer$asd_phenotype)
+
+temp = for_CN_cancer
+temp$pheno = as.numeric(as.factor(temp$asd_phenotype))
+temp$SEX = as.numeric(as.factor(temp$SEX))
+GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
+title = "Scatterplot Matrix for PHTS data")
+
+car::vif(lm(CN ~ phenotype + SEX + AGCNST,data=temp))
+car::vif(lm(burden ~ phenotype + haplogroup,data=temp))
+```
+```{r}
+temp$SEX = as.factor(temp$SEX)
+temp$cancer_phenotype = as.factor(temp$cancer_phenotype)
+summary(glm(cancer_phenotype ~ CN + SEX + AGCNST,data=temp,family = "binomial"))
+
+
+summary(glm(cancer_phenotype ~ CN + AGCNST,data=temp,family = "binomial"))
+summary(glm(cancer_phenotype ~ CN + SEX,data=temp,family = "binomial"))
+```
+## Cancer vs. neither
+### logistic
+```{r}
+temp1 = for_CN[which(for_CN$phenotype=="neither"),]
+temp1$cancer_phenotype = "neither"
+Cancer = for_CN_cancer[which(for_CN_cancer$cancer_phenotype=="Cancer"),]
+temp = rbind.data.frame(Cancer[c(1:19,21)],temp1)
+temp$AGCNST = as.numeric(temp$AGCNST)
+
+
+summary(lm(CN ~ cancer_phenotype + SEX + AGCNST,data=temp))
+summary(lm(CN ~ cancer_phenotype + AGCNST,data=temp))
+summary(lm(CN ~ cancer_phenotype + SEX,data=temp))
+```
