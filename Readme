@@ -3,6 +3,9 @@ This the scripts and code (RMarkdown files) for generation of association statis
 
 
 01PHTS_mtDNA_CN_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA CN. 
+
 02PHTS_mtDNA_CN_H_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA CN within H haplogroup. 
+
 03SNV_burden_analysi.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA SNV burden. 
+
 04mutation_consequence_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA SNV mutation consequences. 
