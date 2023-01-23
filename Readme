@@ -1,1 +1,8 @@
 This the scripts and code (RMarkdown files) for generation of association statistics and additional statistical analyses of the article "The Mitochondrial Genome as a Modifier of Autism versus Cancer Phenotypes in PTEN Hamartoma Tumor Syndrome".
+
+
+
+01PHTS_mtDNA_CN_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA CN. 
+02PHTS_mtDNA_CN_H_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA CN within H haplogroup. 
+03SNV_burden_analysi.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA SNV burden. 
+04mutation_consequence_analysis.Rmd is the file that analyzed the association between PHTS phenotypes and mtDNA SNV mutation consequences. 
