@@ -75,27 +75,6 @@ c(1,"neither","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-```
-
-```{r}
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-    ggtitle("p value of wilcox test results in CN whinin H haplogrup") +
-    scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/04_CN_H_p.pdf", width = 8, height = 6)
-
 ```
 
 ## wilcoxon compaerisions
@@ -135,26 +114,6 @@ c(1,"neither","neither"))
 
 colnames(CN_heat_ASD_H) = c("p value","phenotype1","phenotype2")
 CN_heat_ASD_H$`p value` = as.numeric(CN_heat_ASD_H$`p value`)
-CN_heat_ASD_H$groups <- cut(CN_heat_ASD_H$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-```
-
-
-```{r}
-ggplot(data=CN_heat_ASD_H,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
 ```
 
 

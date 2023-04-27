@@ -58,65 +58,6 @@ for_CN$burden_noinsert = temp$Freq
 for_CN_H = for_CN[which(for_CN$haplogroup=="H"),]
 ```
 
-```{r}
-ggplot(data=for_CN_H,aes(x=burden_noinsert)) +
-  geom_density(fill="lightblue") +
-  ggtitle("SNP/variant burden density plot in H haplogroup") +
-  theme_bw() +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        #legend.text= element_text(size=13),
-        #legend.title = element_text(size=15),
-        legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/04_burden_density_H.pdf", width = 8, height = 6)
-```
-
-
-```{r}
-ggplot(data=for_CN_H,aes(x=burden_noinsert,fill=phenotype)) +
-  geom_density(alpha=0.6) +
-  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="onlyASD"),]$burden_noinsert), size=0.6, color="#00BFC4",alpha=0.6) + #lab
-  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="ASDCancer"),]$burden_noinsert), size=0.6,color = "#C77CFF",alpha=0.6) + #zi
-  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="neither"),]$burden_noinsert), size=0.6, color="#F8766D",alpha=0.6) + #ju
-  geom_vline(xintercept=mean(for_CN_H[which(for_CN_H$phenotype=="onlyCancer"),]$burden_noinsert), size=0.6, color="#7CAE00",alpha=0.6) +
-  ggtitle("SNP/variant burden density plot in H haplogroup") +
-  theme_bw() +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/04_burden_density_phenotype_H.pdf", width = 8, height = 6)
-```
-
-
-```{r}
-for_CN_H$pheno = factor(for_CN_H$pheno,levels = c("neither","ASD","Cancer","ASDCancer"))
-
-ggplot(data=for_CN_H,aes(x=pheno,y=burden_noinsert,fill=pheno)) +
-  geom_boxplot(alpha=0.6) +
-  geom_quasirandom(dodge.width=0.9,alpha=.4) +
-  xlab("") +
-  ylab("variant burden") +
-  theme_bw() +
-  #scale_fill_brewer(palette="Set3") +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        #legend.text= element_text(size=13),
-        #legend.title = element_text(size=15),
-        legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/04_variant_burden_H_boxplot.pdf", width = 8, height = 6)
-```
-
 
 ## wilcox test
 ```{r}
@@ -150,29 +91,8 @@ c(1,"neither","neither")
 
 colnames(burden_heat) = c("p value","phenotype1","phenotype2")
 burden_heat$`p value` = as.numeric(burden_heat$`p value`)
-burden_heat$groups <- cut(burden_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
 ```
 
-```{r}
-ggplot(data=burden_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-    ggtitle("p value of wilcox test results in variant burden whinin H haplogrup") +
-    scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/04_variant_burden_H_p.pdf", width = 8, height = 6)
-```
-
-## logistic regression - controlling age and sex
 ```{r}
 temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="ASD"),]
 temp$pheno = as.factor(temp$pheno)
@@ -181,6 +101,14 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
+
+dat_onlyasdonlycancer_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_onlyasdonlycancer_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_onlyasdonlycancer_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_onlyasdonlycancer_burden = glm(pheno ~ CN,data=temp,family = "binomial")
+
+
 
 
 temp = for_CN_H[which(for_CN_H$pheno=="ASDCancer"|for_CN_H$pheno=="ASD"),]
@@ -190,6 +118,12 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
+
+dat_onlyasdasdcancer_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_onlyasdasdcancer_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_onlyasdasdcancer_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_onlyasdasdcancer_burden = glm(pheno ~ CN,data=temp,family = "binomial")
 
 
 temp = for_CN_H[which(for_CN_H$pheno=="neither"|for_CN_H$pheno=="ASD"),]
@@ -199,7 +133,12 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
 
+dat_onlyasdneither_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_onlyasdneither_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_onlyasdneither_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_onlyasdneither_burden = glm(pheno ~ CN,data=temp,family = "binomial")
 
 temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="ASDCancer"),]
 temp$pheno = as.factor(temp$pheno)
@@ -208,6 +147,12 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
+
+dat_onlycancerasdcancer_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_onlycancerasdcancer_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_onlycancerasdcancer_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_onlycancerasdcancer_burden = glm(pheno ~ CN,data=temp,family = "binomial")
 
 
 temp = for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="neither"),]
@@ -217,6 +162,13 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
+
+dat_onlycancerneither_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_onlycancerneither_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_onlycancerneither_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_onlycancerneither_burden = glm(pheno ~ CN,data=temp,family = "binomial")
+
 
 
 temp = for_CN_H[which(for_CN_H$pheno=="ASDCancer"|for_CN_H$pheno=="neither"),]
@@ -226,7 +178,140 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(pheno ~ burden + SEX + AGCNST,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + SEX ,data=temp, family = "binomial"))
 summary(glm(pheno ~ burden + AGCNST,data=temp, family = "binomial"))
+summary(glm(pheno ~ burden ,data=temp, family = "binomial"))
+
+dat_asdcancerneither_burden_sex_age = glm(pheno ~ CN + SEX + AGCNST,data=temp,family = "binomial")
+dat_asdcancerneither_burden_age = glm(pheno ~ CN + AGCNST,data=temp,family = "binomial")
+dat_asdcancerneither_burden_sex = glm(pheno ~ CN + SEX,data=temp,family = "binomial")
+dat_asdcancerneither_burden = glm(pheno ~ CN,data=temp,family = "binomial")
 ```
+
+### forest plot
+#### onlyasd onlycancer
+```{r}
+dat_onlyasdonlycancer = rbind.data.frame(exp(cbind(coef(dat_onlyasdonlycancer_burden), confint(dat_onlyasdonlycancer_burden)))[2,], 
+exp(cbind(coef(dat_onlyasdonlycancer_burden_sex), confint(dat_onlyasdonlycancer_burden_sex)))[2,], exp(cbind(coef(dat_onlyasdonlycancer_burden_age), confint(dat_onlyasdonlycancer_burden_age)))[2,], exp(cbind(coef(dat_onlyasdonlycancer_burden_sex_age), confint(dat_onlyasdonlycancer_burden_sex_age)))[2,])  
+colnames(dat_onlyasdonlycancer) = c("OR","2.5%","97.5%")
+dat_onlyasdonlycancer$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_onlyasdonlycancer, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+```
+
+#### onlyasd asdcancer
+```{r}
+dat_onlyasdasdcancer = rbind.data.frame(exp(cbind(coef(dat_onlyasdasdcancer_burden), confint(dat_onlyasdasdcancer_burden)))[2,], 
+exp(cbind(coef(dat_onlyasdasdcancer_burden_sex), confint(dat_onlyasdasdcancer_burden_sex)))[2,], exp(cbind(coef(dat_onlyasdasdcancer_burden_age), confint(dat_onlyasdasdcancer_burden_age)))[2,], exp(cbind(coef(dat_onlyasdasdcancer_burden_sex_age), confint(dat_onlyasdasdcancer_burden_sex_age)))[2,])  
+colnames(dat_onlyasdasdcancer) = c("OR","2.5%","97.5%")
+dat_onlyasdasdcancer$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_onlyasdasdcancer, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+ggsave("~/Documents/08PHTS_WGS_mt/manuscript/20230119HGGAdvancessubmissionRW/#2response/230314_burden_onlyasdasdcancer_forestplot.pdf",width = 6, height = 4)
+```
+#### onlyasdneither
+```{r}
+dat_onlyasdneither = rbind.data.frame(exp(cbind(coef(dat_onlyasdneither_burden), confint(dat_onlyasdneither_burden)))[2,], 
+exp(cbind(coef(dat_onlyasdneither_burden_sex), confint(dat_onlyasdneither_burden_sex)))[2,], exp(cbind(coef(dat_onlyasdneither_burden_age), confint(dat_onlyasdneither_burden_age)))[2,], exp(cbind(coef(dat_onlyasdneither_burden_sex_age), confint(dat_onlyasdneither_burden_sex_age)))[2,])  
+colnames(dat_onlyasdneither) = c("OR","2.5%","97.5%")
+dat_onlyasdneither$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_onlyasdneither, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+ggsave("~/Documents/08PHTS_WGS_mt/manuscript/20230119HGGAdvancessubmissionRW/#2response/230314_burden_onlyasdneither_forestplot.pdf",width = 6, height = 4)
+```
+
+#### onlycancer neither
+```{r}
+dat_onlycancerneither = rbind.data.frame(exp(cbind(coef(dat_onlycancerneither_burden), confint(dat_onlycancerneither_burden)))[2,], 
+exp(cbind(coef(dat_onlycancerneither_burden_sex), confint(dat_onlycancerneither_burden_sex)))[2,], exp(cbind(coef(dat_onlycancerneither_burden_age), confint(dat_onlycancerneither_burden_age)))[2,], exp(cbind(coef(dat_onlycancerneither_burden_sex_age), confint(dat_onlycancerneither_burden_sex_age)))[2,])  
+colnames(dat_onlycancerneither) = c("OR","2.5%","97.5%")
+dat_onlycancerneither$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_onlycancerneither, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+ggsave("~/Documents/08PHTS_WGS_mt/manuscript/20230119HGGAdvancessubmissionRW/#2response/230314_burden_onlycancerneither_forestplot.pdf",width = 6, height = 4)
+```
+
+#### onlycancer asdcancer
+```{r}
+dat_onlycancerasdcancer = rbind.data.frame(exp(cbind(coef(dat_onlycancerasdcancer_burden), confint(dat_onlycancerasdcancer_burden)))[2,], 
+exp(cbind(coef(dat_onlycancerasdcancer_burden_sex), confint(dat_onlycancerasdcancer_burden_sex)))[2,], exp(cbind(coef(dat_onlycancerasdcancer_burden_age), confint(dat_onlycancerasdcancer_burden_age)))[2,], exp(cbind(coef(dat_onlycancerasdcancer_burden_sex_age), confint(dat_onlycancerasdcancer_burden_sex_age)))[2,])  
+colnames(dat_onlycancerasdcancer) = c("OR","2.5%","97.5%")
+dat_onlycancerasdcancer$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_onlycancerasdcancer, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+ggsave("~/Documents/08PHTS_WGS_mt/manuscript/20230119HGGAdvancessubmissionRW/#2response/230314_burden_onlycancerasdcancer_forestplot.pdf",width = 6, height = 4)
+```
+
+
+#### asdcancer neither
+```{r}
+dat_asdcancerneither = rbind.data.frame(exp(cbind(coef(dat_asdcancerneither_burden), confint(dat_asdcancerneither_burden)))[2,], 
+exp(cbind(coef(dat_asdcancerneither_burden_sex), confint(dat_asdcancerneither_burden_sex)))[2,], exp(cbind(coef(dat_asdcancerneither_burden_age), confint(dat_asdcancerneither_burden_age)))[2,], exp(cbind(coef(dat_asdcancerneither_burden_sex_age), confint(dat_asdcancerneither_burden_sex_age)))[2,])  
+colnames(dat_asdcancerneither) = c("OR","2.5%","97.5%")
+dat_asdcancerneither$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_asdcancerneither, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+```
+
+
 ## asd vs. no asd
 ```{r}
 for_CN_H$asd_phenotype = "ASD"
@@ -234,11 +319,6 @@ for_CN_H[which(for_CN_H$pheno=="Cancer"|for_CN_H$pheno=="neither"),"asd_phenotyp
 ```
 
 ```{r}
-# GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
-# title = "Scatterplot Matrix for PHTS data")
-# 
-# car::vif(lm(burden_noinsert ~ phenotype + SEX + AGCNST,data=temp))
-
 for_CN_H$asd_phenotype = as.character(for_CN_H$asd_phenotype)
 temp = for_CN_H
 temp$asd_phenotype = as.factor(temp$asd_phenotype)
@@ -248,10 +328,37 @@ temp$asd_phenotype = as.factor(temp$asd_phenotype)
 summary(glm(asd_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
 summary(glm(asd_phenotype ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
 summary(glm(asd_phenotype ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ burden_noinsert,data=temp,family = "binomial"))
+
+dat_asd_burden_sex_age = glm(asd_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial")
+
+dat_asd_burden_age = glm(asd_phenotype ~ burden_noinsert+ AGCNST,data=temp,family = "binomial")
+
+dat_asd_burden_sex = glm(asd_phenotype ~ burden_noinsert + SEX,data=temp,family = "binomial")
+
+dat_asd_burden = glm(asd_phenotype ~ burden_noinsert,data=temp,family = "binomial")
 
 
 wilcox.test(temp[which(temp$asd_phenotype=="ASD"),"burden_noinsert"],temp[which(temp$asd_phenotype=="noASD"),"burden_noinsert"])
+```
 
+```{r}
+dat_asd = rbind.data.frame(exp(cbind(coef(dat_asd_burden), confint(dat_asd_burden)))[2,], 
+exp(cbind(coef(dat_asd_burden_sex), confint(dat_asd_burden_sex)))[2,], exp(cbind(coef(dat_asd_burden_age), confint(dat_asd_burden_age)))[2,], exp(cbind(coef(dat_asd_burden_sex_age), confint(dat_asd_burden_sex_age)))[2,])  
+colnames(dat_asd) = c("OR","2.5%","97.5%")
+dat_asd$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_asd, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
 ```
 
 ## asd vs. neither
@@ -272,6 +379,34 @@ temp$SEX = as.factor(temp$SEX)
 summary(glm(asdneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
 summary(glm(asdneither_pheno ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
 summary(glm(asdneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+summary(glm(asdneither_pheno ~ burden_noinsert ,data=temp,family = "binomial"))
+
+dat_asdneither_burden_sex_age = glm(asdneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial")
+
+dat_asdneither_burden_age = glm(asdneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial")
+
+dat_asdneither_burden_sex = glm(asdneither_pheno ~ burden_noinsert + SEX,data=temp,family = "binomial")
+
+dat_asdneither_burden = glm(asdneither_pheno ~ burden_noinsert,data=temp,family = "binomial")
+```
+
+```{r}
+dat_asdneither = rbind.data.frame(exp(cbind(coef(dat_asdneither_burden), confint(dat_asdneither_burden)))[2,], 
+exp(cbind(coef(dat_asdneither_burden_sex), confint(dat_asdneither_burden_sex)))[2,], exp(cbind(coef(dat_asdneither_burden_age), confint(dat_asdneither_burden_age)))[2,], exp(cbind(coef(dat_asdneither_burden_sex_age), confint(dat_asdneither_burden_sex_age)))[2,])  
+colnames(dat_asdneither) = c("OR","2.5%","97.5%")
+dat_asdneither$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_asdneither, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
 ```
 
 ## cancer vs. no cancer
@@ -280,11 +415,6 @@ for_CN_H$cancer_phenotype = "Cancer"
 for_CN_H[which(for_CN_H$pheno=="ASD"|for_CN_H$pheno=="neither"),"cancer_phenotype"] = "noCancer"
 
 wilcox.test(for_CN_H[which(for_CN_H$cancer_phenotype=="Cancer"),"burden_noinsert"],for_CN_H[which(for_CN_H$cancer_phenotype=="noCancer"),"burden_noinsert"])
-
-# GGally::ggpairs(dplyr::select(temp,SEX,pheno,AGCNST),
-# title = "Scatterplot Matrix for PHTS data")
-# 
-# car::vif(lm(burden_noinsert ~ phenotype + SEX + AGCNST,data=temp))
 
 temp = for_CN_H
 temp$cancer_phenotype = as.factor(temp$cancer_phenotype)
@@ -295,7 +425,32 @@ temp$SEX = as.numeric(as.factor(temp$SEX))
 summary(glm(cancer_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
 summary(glm(cancer_phenotype ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
 summary(glm(cancer_phenotype ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+summary(glm(cancer_phenotype ~ burden_noinsert ,data=temp,family = "binomial"))
 
+
+dat_cancernocancer_burden_sex_age = glm(cancer_phenotype ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial")
+dat_cancernocancer_burden_age = glm(cancer_phenotype ~ burden_noinsert + AGCNST,data=temp,family = "binomial")
+dat_cancernocancer_burden_sex = glm(cancer_phenotype ~ burden_noinsert + SEX,data=temp,family = "binomial")
+dat_cancernocancer_burden = glm(cancer_phenotype ~ burden_noinsert,data=temp,family = "binomial")
+```
+
+```{r}
+dat_cancernocancer = rbind.data.frame(exp(cbind(coef(dat_cancernocancer_burden), confint(dat_cancernocancer_burden)))[2,], 
+exp(cbind(coef(dat_cancernocancer_burden_sex), confint(dat_cancernocancer_burden_sex)))[2,], exp(cbind(coef(dat_cancernocancer_burden_age), confint(dat_cancernocancer_burden_age)))[2,], exp(cbind(coef(dat_cancernocancer_burden_sex_age), confint(dat_cancernocancer_burden_sex_age)))[2,])  
+colnames(dat_cancernocancer) = c("OR","2.5%","97.5%")
+dat_cancernocancer$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_cancernocancer, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
 ```
 
 ## cancer vs. neither
@@ -313,12 +468,41 @@ temp$SEX = as.factor(temp$SEX)
 temp$AGCNST = as.numeric(temp$AGCNST)
 
 summary(glm(cancerneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial"))
-
-summary(glm(cancerneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
 summary(glm(cancerneither_pheno ~ burden_noinsert + SEX ,data=temp,family = "binomial"))
+summary(glm(cancerneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial"))
+summary(glm(cancerneither_pheno ~ burden_noinsert ,data=temp,family = "binomial"))
+
+
+dat_cancer_burden_sex_age = glm(cancerneither_pheno ~ burden_noinsert + SEX + AGCNST,data=temp,family = "binomial")
+
+dat_cancer_burden_age = glm(cancerneither_pheno ~ burden_noinsert + AGCNST,data=temp,family = "binomial")
+
+dat_cancer_burden_sex = glm(cancerneither_pheno ~ burden_noinsert + SEX,data=temp,family = "binomial")
+
+dat_cancer_burden = glm(cancerneither_pheno ~ burden_noinsert,data=temp,family = "binomial")
 ```
 
-## binary plot 
+```{r}
+dat_cancer = rbind.data.frame(exp(cbind(coef(dat_cancer_burden), confint(dat_cancer_burden)))[2,], 
+exp(cbind(coef(dat_cancer_burden_sex), confint(dat_cancer_burden_sex)))[2,], exp(cbind(coef(dat_cancer_burden_age), confint(dat_cancer_burden_age)))[2,], exp(cbind(coef(dat_cancer_burden_sex_age), confint(dat_cancer_burden_sex_age)))[2,])  
+colnames(dat_cancer) = c("OR","2.5%","97.5%")
+dat_cancer$variants = c("only burden","burden and sex","burden and age","burden, sex and age")
+
+ggplot(data=dat_cancer, aes(y=variants, x=OR, xmin=`2.5%`, xmax=`97.5%`)) +
+  geom_point(shape=15,size=3,color="blue") +
+  geom_errorbarh(height=.1) +
+  #scale_x_continuous(breaks=1:nrow(dat_cancer), labels=dat_cancer$variants) +
+  labs(title='', x='Odds Ratio', y = 'variants included in variant\nburden logistic\nregression model') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic() +
+  theme(
+  axis.title = element_text(size = 12),
+  axis.text = element_text(size = 12)
+)
+```
+
+
+## beswarrm plot of MW test resutls 
 ```{r}
 temp = for_CN_H[which(for_CN_H$phenotype=="ASD" |for_CN_H$phenotype=="Cancer"),]
 p_onlyasd_onlycancer = 
@@ -535,12 +719,6 @@ p_cancerneither = ggplot(data=temp,aes(x=pheno,y=burden_noinsert,fill=pheno)) +
 
 ```{r}
 p = arrangeGrob(p_onlyasd_onlycancer,p_onlyasd_asdcancer,p_onlyasd_neither,p_onlycancer_neitehr,p_onlycancer_asdcancer,p_neither_asdcancer,p_asd, p_cancer, p_asdneither,p_cancerneither,nrow=5)
-ggsave("~/Documents/08PHTS_WGS_mt/manuscript/new_plot/04_burden_H_boxplot_binary.pdf",p, width = 8, height = 20)
-```
-
-```{r}
-write.table(all_no_insert,"~/Documents/08PHTS_WGS_mt/variant/proband_remove/new_all_no_insert.txt",sep="\t",quote = F)
-
 ```
 
 

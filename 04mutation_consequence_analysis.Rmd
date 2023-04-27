@@ -72,12 +72,42 @@ all_consequence_missense = reshape::melt(all_consequence)
 all_consequence_missense$variable=as.character(all_consequence_missense$variable)
 all_consequence_missense = all_consequence_missense[which(all_consequence_missense$variable=="missense_variant"),]
 
-ggplot(data=all_consequence_missense,aes(x=value,fill=pheno)) +
-  geom_histogram(position = "dodge",binwidth = 0.5) +
-  theme_bw() +
-  ggtitle("mutation consequence = missense histogram")
-ggsave("~/Documents/08PHTS_WGS_mt/manuscript/new_plot/06_missense_burden_hist.pdf")
 ```
+
+```{r}
+mis_onlyASD = all_consequence_missense[which(all_consequence_missense$pheno=="ASD"),]
+mis_onlyASD$pheno = "onlyASD/DD"
+
+mis_onlyCancer = all_consequence_missense[which(all_consequence_missense$pheno=="Cancer"),]
+mis_onlyCancer$pheno = "onlyCancer"
+
+mis_neither = all_consequence_missense[which(all_consequence_missense$pheno=="neither"),]
+mis_neither$pheno = "neither"
+
+mis_ASD = all_consequence_missense[which(all_consequence_missense$pheno=="ASD"|all_consequence_missense$pheno=="ASDCancer"),]
+mis_ASD$pheno = "ASD/DD"
+
+mis_Cancer = all_consequence_missense[which(all_consequence_missense$pheno=="Cancer"|all_consequence_missense$pheno=="ASDCancer"),]
+mis_Cancer$pheno = "Cancer"
+
+mis_ASDCancer = all_consequence_missense[which(all_consequence_missense$pheno=="ASDCancer"),]
+mis_ASDCancer$pheno = "ASDCancer"
+
+mis_all = rbind.data.frame(mis_ASD,mis_ASDCancer,mis_Cancer,mis_neither,mis_onlyASD,mis_onlyCancer)
+
+mis_mean = c(mean(mis_ASD$value),mean(mis_ASDCancer$value),mean(mis_Cancer$value),mean(mis_neither$value),mean(mis_onlyASD$value),mean(mis_onlyCancer$value))
+
+mis_mean = cbind.data.frame(mis_mean,c("ASD/DD","ASDCancer","Cancer","neither","onlyASD/DD","onlyCancer"))
+colnames(mis_mean) = c("mean","pheno")
+
+ggplot(data=mis_all,aes(x=value,fill=pheno)) +
+  geom_density(alpha = 0.4) +
+  theme_bw() +
+  geom_vline(aes(xintercept = mean, color = pheno), data = mis_mean, linetype = "dashed") +
+  facet_grid(rows = vars(pheno))
+  ggtitle("mutation consequence = missense histogram")
+```
+
 
 ```{r}
 p1 = wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno=="ASD"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="Cancer"),"value"])
@@ -94,6 +124,13 @@ p6 = wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno!=
                                                               p7 = wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno!="Cancer"|all_consequence_missense$pheno!="neither"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="neither"|all_consequence_missense$pheno=="Cancer"),"value"]) #
                                                                  
 p8 = wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno=="Cancer"|all_consequence_missense$pheno=="ASDCancer"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="ASDCancer"|all_consequence_missense$pheno=="ASD"),"value"]) #Cancer vs noCancer, p = p-value = 0.0209
+
+
+wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno=="ASDCancer"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="ASD"),"value"])
+
+wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno=="Cancer"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="ASDCancer"),"value"])
+
+wilcox.test(all_consequence_missense[which(all_consequence_missense$pheno=="neither"),"value"],all_consequence_missense[which(all_consequence_missense$pheno=="ASDCancer"),"value"])
 ```
 
 ```{r}
@@ -110,16 +147,6 @@ c(p8$p.value,"Cancer","ASD")
 
 colnames(consequence_burden) = c("p value","phenotype1","phenotype2")
 consequence_burden$`p value` = as.numeric(consequence_burden$`p value`)
-consequence_burden$groups <- cut(consequence_burden$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=consequence_burden,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue","lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  ggtitle("consequence missense burden vs. phenotype\nwilcox test")
-ggsave("~/Documents/08PHTS_WGS_mt/manuscript/new_plot/06_missense_burden_p.pdf")
 ```
 
 ### noncoding
@@ -127,11 +154,6 @@ ggsave("~/Documents/08PHTS_WGS_mt/manuscript/new_plot/06_missense_burden_p.pdf")
 all_consequence_noncoding = reshape::melt(all_consequence)
 all_consequence_noncoding$variable=as.character(all_consequence_noncoding$variable)
 all_consequence_noncoding = all_consequence_noncoding[which(all_consequence_noncoding$variable=="non_coding_transcript_exon_variant"),]
-
-ggplot(data=all_consequence_noncoding,aes(x=value,fill=pheno)) +
-  geom_histogram(position = "dodge") +
-  theme_bw() +
-  ggtitle("mutation consequence = noncoding histogram")
 ```
 
 ```{r}
@@ -165,13 +187,4 @@ c(p8$p.value,"Cancer","ASD")
 
 colnames(consequence_burden) = c("p value","phenotype1","phenotype2")
 consequence_burden$`p value` = as.numeric(consequence_burden$`p value`)
-consequence_burden$groups <- cut(consequence_burden$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=consequence_burden,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  ggtitle("consequence noncoding burden vs. phenotype\nwilcox test")
 ```

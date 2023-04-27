@@ -50,14 +50,17 @@ for_CN=rbind.data.frame(onlyASD,onlyCancer,ASDCancer,neither)
 for_CN$AGCNST = as.numeric(for_CN$AGCNST)
 ```
 
-# CN density plot for all samples
+# beeswarm plot of CN distribution of within every haplogroup
 ```{r}
-ggplot(data=short_phenotype,aes(x=CN)) +
+ggplot(data=short_phenotype,aes(y=CN,x=haplogroup)) +
   #geom_histogram(alpha=0.6) +
-  geom_density(fill="lightblue") +
-  ggtitle("Copy Number Density Plot") +
+  #geom_density(fill="lightblue") +
+  geom_boxplot() + 
+  geom_point(alpha=0.6,aes(col=haplogroup),position=position_jitter(w=0.4)) +
+  #ggtitle("") +
   theme_bw() +
-  scale_fill_brewer(palette="Set3") +
+  ylab("mtDNA CN") +
+  #scale_color_brewer(palette="Set3") +
   theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
         axis.text.y=element_text(size=13),
         axis.title.x=element_text(size=15),
@@ -66,52 +69,38 @@ ggplot(data=short_phenotype,aes(x=CN)) +
         #legend.title = element_text(size=15),
         legend.position = "none",
         title = element_text(size=20))
-#ggsave("plot/03_CN_density.pdf", width = 8, height = 6)
-```  
-
-```{r}
-ggplot(data=onlyASD,aes(x=CN,fill="onlyASD")) +
-  geom_density(alpha=0.6) +
-  geom_vline(xintercept=mean(onlyASD$CN), size=0.6, color="#00BFC4") +
-  geom_density(data=onlyCancer,aes(x=CN,fill="onlyCancer"),alpha=0.6) +
-  geom_vline(xintercept=mean(onlyCancer$CN), size=0.6,color = "#C77CFF") +
-  geom_density(data=ASDCancer,aes(x=CN,fill="ASDCancer"),alpha=0.6) +
-  geom_vline(xintercept=mean(ASDCancer$CN), size=0.6, color="#F8766D") +
-  geom_density(data=neither,aes(x=CN,fill="neither"),alpha=0.6) +
-  geom_vline(xintercept=mean(neither$CN), size=0.6, color="#7CAE00") +
-  xlab("Copy Number") +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        #legend.text= element_text(size=13),
-        legend.title = element_blank(),
-        #legend.position = "none",
-        title = element_text(size=20)) +
-  theme_bw()
-#ggsave("plot/03_CN_phenotype_density.pdf", width = 8, height = 6)  
 ```
 
+# beeswarm plot of CN distribution between H and non-H haplogroups
 ```{r}
-ggplot(data=for_CN,aes(x=phenotype,y=CN,fill=phenotype)) +
-  geom_boxplot(alpha=0.6) +
-  geom_quasirandom(dodge.width=0.9,alpha=.4) +
+short_phenotype$H = "non-H"
+short_phenotype[which(short_phenotype$haplogroup=="H"),"H"] = "H"
+
+ggplot(data=short_phenotype,aes(y=CN,x=H)) +
+  #geom_histogram(alpha=0.6) +
+  #geom_density(fill="lightblue") +
+  geom_boxplot() + 
+  geom_point(alpha=0.6,aes(col=H),position=position_jitter(w=0.4)) +
+  #ggtitle("Copy Number Density Plot") +
+  ylab("mtDNA CN") +
+  xlab("haplogroup") +
   theme_bw() +
-  theme(axis.text.x=element_text(angle=45,vjust = 0.5, hjust=0.5)) +
-  ylab("Copy Number") +
+  scale_color_brewer(palette="Accent") +
   theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
         axis.text.y=element_text(size=13),
         axis.title.x=element_text(size=15),
         axis.title.y=element_text(size=15),
         #legend.text= element_text(size=13),
-        legend.title = element_blank(),
-        #legend.position = "none",
-        title = element_text(size=20)) +
-  theme_bw()
-#ggsave("plot/03_CN_phenotype_boxplot.pdf", width = 8, height = 6)  
+        #legend.title = element_text(size=15),
+        legend.position = "none",
+        title = element_text(size=20))
+```
+## MW test
+```{r}
+wilcox.test(short_phenotype[which(short_phenotype$H=="H"),"CN"],short_phenotype[which(short_phenotype$H=="non-H"),"CN"])
 ```
 
-# CN wilcox test for all sample
+# CN MW test for all sample
 ## onlyASD, onlyCancer, ASDCancer, neither
 ```{r}
 t1 = wilcox.test(onlyASD$CN,onlyCancer$CN)[3]
@@ -142,24 +131,6 @@ c(1,"neither","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-    xlab("") +
-    ylab("") +
-    scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
 ```
 
 ## ASD, no ASD, neither
@@ -171,6 +142,7 @@ for_CN_ASD=rbind.data.frame(ASD,noASD)
 for_CN_ASD$AGCNST = as.numeric(for_CN_ASD$AGCNST)
 for_CN_ASD$asd_phenotype = factor(for_CN_ASD$asd_phenotype,levels = c("ASD","noASD","neither"))
 ```
+
 ```{r}
 t1 = wilcox.test(ASD$CN,noASD$CN)[3]
 t2 = wilcox.test(ASD$CN,neither$CN)[3]
@@ -189,21 +161,6 @@ colnames(CN_heat_ASD) = c("p value","phenotype1","phenotype2")
 CN_heat_ASD$`p value` = as.numeric(CN_heat_ASD$`p value`)
 CN_heat_ASD$groups <- cut(CN_heat_ASD$`p value`,              
                        breaks = c(1,0.1,0.05,0))
-
-ggplot(data=CN_heat_ASD,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        #legend.text= element_text(size=13),
-        legend.title = element_text(""),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/03_CN_ASD_p.pdf", width = 8, height = 6)
 ```
 
 ```{r}
@@ -227,24 +184,6 @@ c(t7,"noCancer","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        #legend.text= element_text(size=13),
-        legend.title = element_text(""),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/03_CN_ASD_all_p.pdf", width = 8, height = 6)
-
 ```
 
 ## cancer, no cancer, neither
@@ -275,22 +214,7 @@ c(1,"neither","neither"))
 
 colnames(CN_heat_cancer) = c("p value","phenotype1","phenotype2")
 CN_heat_cancer$`p value` = as.numeric(CN_heat_cancer$`p value`)
-CN_heat_cancer$groups <- cut(CN_heat_cancer$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
 
-ggplot(data=CN_heat_cancer,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_blank(),
-        #legend.position = "none",
-        title = element_text(size=20))
 ```
 ## ASD vs. Cancer
 ```{r}
@@ -342,22 +266,7 @@ c(t10,"Cancer","neither"))
 
 colnames(CN_heat_cancerasd) = c("p value","phenotype1","phenotype2")
 CN_heat_cancerasd$`p value` = as.numeric(CN_heat_cancerasd$`p value`)
-CN_heat_cancerasd$groups <- cut(CN_heat_cancerasd$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
 
-ggplot(data=CN_heat_cancerasd,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("darkblue","skyblue", "lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
 ```
 
 # CN controlling age and sex
@@ -447,24 +356,7 @@ c(1,"neither","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
 
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  ggtitle("log regression results\n-controlling age at constant and sex") +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/03_CN_log_regression_sex_age_p.pdf", width = 8, height = 6)
 ```
 
 ###logistic regression - controlling and sex
@@ -538,24 +430,6 @@ c(1,"neither","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  ggtitle("log regression results\n-controlling age at constant and sex") +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
-#ggsave("plot/03_CN_log_regression_sex_age_p.pdf", width = 8, height = 6)
 ```
 
 
@@ -630,23 +504,6 @@ c(1,"neither","neither")
 
 colnames(CN_heat) = c("p value","phenotype1","phenotype2")
 CN_heat$`p value` = as.numeric(CN_heat$`p value`)
-CN_heat$groups <- cut(CN_heat$`p value`,              
-                       breaks = c(1,0.1,0.05,0))
-
-ggplot(data=CN_heat,aes(phenotype1, phenotype2, fill=groups)) + 
-    geom_tile() +
-    theme_bw() +
-  scale_fill_manual(values = c("skyblue","lightblue"), name = "p value", 
-                  guide = guide_legend(reverse = TRUE)) +
-  ggtitle("log regression results\n-controlling age at constant and sex") +
-  theme(axis.text.x=element_text(size=13,angle=0,hjust=0.5),
-        axis.text.y=element_text(size=13),
-        axis.title.x=element_text(size=15),
-        axis.title.y=element_text(size=15),
-        legend.text= element_text(size=13),
-        legend.title = element_text(size=15),
-        #legend.position = "none",
-        title = element_text(size=20))
 ```
 
 
@@ -679,11 +536,11 @@ temp1 = for_CN[which(for_CN$phenotype=="neither"),]
 temp1$asd_phenotype = "neither"
 temp = rbind.data.frame(ASD[,1:20],temp1)
 temp$AGCNST = as.numeric(temp$AGCNST)
+temp$asd_phenotype = as.factor(temp$asd_phenotype)
 
-
-summary(glm(CN ~ asd_phenotype + SEX + AGCNST,data=temp,family = "binomial"))
-summary(glm(CN ~ asd_phenotype + AGCNST,data=temp,family = "binomial"))
-summary(glm(CN ~ asd_phenotype + SEX,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ CN + SEX + AGCNST,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ CN + AGCNST,data=temp,family = "binomial"))
+summary(glm(asd_phenotype ~ CN + SEX,data=temp,family = "binomial"))
 ```
 
 
